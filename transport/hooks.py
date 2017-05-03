@@ -78,6 +78,15 @@ app_license = "MIT"
 #	}
 # }
 
+doc_events = {
+	"Payment Entry": {
+		"on_submit": "transport.api.payment_on_submit",
+		"on_cancel": "transport.api.payment_on_cancel"
+	}
+}
+
+
+
 # Scheduled Tasks
 # ---------------
 
