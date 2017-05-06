@@ -1,5 +1,5 @@
 import frappe
-from frappe import _
+from frappe import msgprint, _, db
 
 @frappe.whitelist()
 def payment_on_submit(self, method):
@@ -16,6 +16,7 @@ def po_payments(self, method):
 	for row in self.references:
 		if row.reference_doctype = "Purchase Order":
 			target_po = frappe.get_doc("Purchase Order", row.reference_name)
+			
 			target_po.append("payments", {
 				"reference_date": self.reference_date,
 				"mode_of_payment": self.mode_of_payment,
