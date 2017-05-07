@@ -33,7 +33,8 @@ def can_po_payments(self, method):
 	for row in self.references:
 		if row.reference_doctype == "Purchase Order":
 			existing_row_id = frappe.db.get_value("Purchase Order Payments", filters={"parent": row.reference_name, "payment_entry": self.name}, fieldname="name")
-			existing_row_id.docstatus = 2
+			target_row = frappe.get_doc("Purchase Order Payments", row.target_row)
+			target_row.docstatus = 2
 			frappe.delete_doc.delete_from_table("Purchase Order Payments", existing_row_id)
 			frappe.db.commit()
 
