@@ -22,7 +22,7 @@ def po_payments(self, method):
 				"mode_of_payment": self.mode_of_payment,
 				"reference_no": self.reference_no,
 				"paid_amount" : self.allocated_amount,
-				"payment_entry" : self.name
+				"payment_entry" : self.name,
 				"difference_amount" : self.difference_amount
 			})
 		target_po.save()
