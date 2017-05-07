@@ -5,11 +5,6 @@ from frappe import msgprint, _, db
 def payment_on_submit(self, method):
 	po_payments(self, method)
 
-@frappe.whitelist()
-def payment_on_cancel(self, method):
-	can_po_payments(self, method)
-
-
 
 #Update PO payments on Submit
 def po_payments(self, method):
@@ -27,16 +22,5 @@ def po_payments(self, method):
 			})
 		target_po.save()
 		frappe.db.commit()
-
-#CANCEL Payment
-def can_po_payments(self, method):
-	for row in self.references:
-		if row.reference_doctype == "Purchase Order":
-			existing_row_id = frappe.db.get_value("Purchase Order Payments", filters={"parent": row.reference_name, "payment_entry": self.name}, fieldname="name")
-			tr = frappe.get_doc("Purchase Order Payments", existing_row_id)
-			tr.parent=''
-			tr.docstatus = 2
-			frappe.delete_doc("Purchase Order Payments", existing_row_id)
-			frappe.db.commit()
 
 
