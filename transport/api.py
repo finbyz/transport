@@ -22,5 +22,3 @@ def po_payments(self, method):
 			})
 		target_po.save()
 		frappe.db.commit()
-
-
