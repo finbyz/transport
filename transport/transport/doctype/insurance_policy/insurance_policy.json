@@ -991,7 +991,7 @@
  "issingle": 0, 
  "istable": 0, 
  "max_attachments": 0, 
- "modified": "2017-06-04 16:22:30.732586", 
+ "modified": "2017-06-04 17:07:21.416371", 
  "modified_by": "Administrator", 
  "module": "Transport", 
  "name": "Insurance Policy", 
@@ -1059,7 +1059,7 @@
    "write": 1
   }
  ], 
- "quick_entry": 1, 
+ "quick_entry": 0, 
  "read_only": 0, 
  "read_only_onload": 0, 
  "search_fields": "vehicle", 
