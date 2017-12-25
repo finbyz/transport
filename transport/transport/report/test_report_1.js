@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 frappe.require("assets/erpnext/js/financial_statements.js", function() {
-	frappe.query_reports["Cost for Each Truck"] = {
+	frappe.query_reports["Test Report 1"] = {
 		"filters": [
 			{
 				"fieldname": "fiscal_year",

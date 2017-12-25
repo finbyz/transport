@@ -35,7 +35,7 @@ class MaintenanceLog(Document):
 				com.save(ignore_permissions=True)
 				frappe.db.commit()
 				
-			content += "</ol><p>Total Service Bill: " + self.total_service_bill
+			content += "</ol><p>Total Service Bill: " + str(self.total_service_bill)
 			
 			com = frappe.new_doc("Communication")
 			com.subject = self.name

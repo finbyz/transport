@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 import frappe
 import erpnext
 from frappe import _
-from frappe.utils import flt, cstr, getdate, nowdate
+from frappe.utils import flt,cstr
 from erpnext.accounts.report.financial_statements import get_period_list
 
 def execute(filters=None):
@@ -19,65 +19,91 @@ def execute(filters=None):
 	return columns, data, None, chart
 
 def get_columns():
-	columns = [_("Log") + ":Link/Maintenance Log:100", 
-				_("Truck No.") + ":Link/Truck Master:80", 
-				_("Make") + ":Data:40",
+	columns = [_("Truck No.") + ":Link/Truck Master:100", 
+				_("Make") + ":Data:50",
 				_("Model") + ":Data:100",  
+				_("Location") + ":data:100", 
+				_("Log") + ":Link/Maintenance Log:100", 
 				_("Odometer") + ":Int:80", 
-				_("Date") + ":Date:80",  
-				_("Driver") + ":Link/Driver Master:80",  
+				_("Date") + ":Date:100",  
+				_("Driver") + ":Link/Driver Master:80",
 				_("Battery Expense") + ":Currency:100", 
-				_("Tyre Expense") + ":Currency:90", 
+				_("Tyre Expense") + ":Currency:100", 
 				_("Spares Expense") + ":Currency:100", 
-				_("Other Service Charge") + ":Currency:140",
-				_("Total Expense") + ":Currency:100"
+				_("Other Service Charge") + ":Currency:120"
 	]
 	return columns
 
 def get_log_data(filters):
 	fy = frappe.db.get_value('Fiscal Year', filters.get('fiscal_year'), ['year_start_date', 'year_end_date'], as_dict=True)
-	
-	where_clause = ''
-	where_clause += filters.truck_no and " and truck_no = '%s' " % filters.truck_no or ""
-	where_clause += filters.driver and " and driver = '%s'" % filters.driver or ""
-	
-	data = frappe.db.sql("""
-		SELECT
-			truck_no as "Truck No.", make as "Make", model as "Model", name as "Log", odometer as "Odometer", date as "Date", driver_name as "Driver", other_service_charge as "Other Service Charge", total_service_bill as "Total Expense"
+	data = frappe.db.sql("""select
+			vhcl.truck_no as "Truck No.", vhcl.make as "Make", vhcl.model as "Model",
+			vhcl.location as "Location", log.name as "Log", log.odometer as "Odometer",
+			log.date as "Date", log.driver as "Driver", log.other_service_charge as "Other Service Charge"
 		from
-			`tabMaintenance Log`
+			`tabTruck Master` vhcl,`tabMaintenance Log` log
 		where
-			docstatus = 1 
-			and date between '%s' and '%s'
-			%s
-		order by date"""%(getdate(fy.year_start_date),getdate(fy.year_end_date),where_clause),as_dict=1)
-		
+			vhcl.truck_no = log.truck_no and log.docstatus = 1 and log.driver and date between %s and %s and %s
+		order by date""" ,(fy.year_start_date, fy.year_end_date), as_dict=1)
 	dl=list(data)
 	
+	#for row in dl:
+	#	row["Battery Expense"] = get_expense("Battery", filters)
+	#	row["Tyre Expense"] = get_expense("Tyre", filters)
+	#	row["Spares Expense"] = get_expense("Spares", filters)
+	#return dl
+	
 	for row in dl:
-		row["Battery Expense"] = get_expense(row["Log"], "Battery", filters)
-		row["Tyre Expense"] = get_expense(row["Log"], "Tyre", filters)
-		row["Spares Expense"] = get_expense(row["Log"], "Spares", filters)
+		row["Truck No"] = ("Truck No", filters)
+		row["Model"] = ("Model", filters)
+		row["Location"] = ("Location", filters)
+		row["Log"] = ("Log", filters)
+		row["Odometer"] = ("Odometer", filters)
+		row["Date"] = ("Date", filters)
 	return dl
-	
-def get_expense(log, type, filters):
+
+def get_expense(type, filters):
 	where_clause = ''
-	if type == "Spares":
-		where_clause += "and tr.service_item != 'Battery' and tr.service_item != 'Tyre'"
-	else:
-		where_clause += "and tr.service_item = '%s'" % type
-	
-	where_clause += filters.truck_no and "and log.truck_no = '%s' " % filters.truck_no or ""
-	where_clause += log and "and tr.parent = log.name and log.name = '%s' " % log or ""
-	
-	return frappe.db.sql("""
+	if filters.truck_no:
+		where_clause += "and truck_no = '%s' " % filters.truck_no
+	if filters.driver:
+		where_clause += "and driver = '%s' " % filters.driver
+		
+	result = frappe.db.sql("""
 		SELECT
-			sum(tr.expense_amount)
+			name as 'Name', truck_no as 'Truck No', driver as 'Driver'
 		FROM
-			`tabMaintenance Log` log, `tabTruck Maintenance` tr
+			`tabMaintenance Log`
 		WHERE
-			tr.docstatus = 1
-			%s"""%(where_clause))[0][0] or 0		
+			docstatus = 1
+			%s"""%(where_clause), as_dict=1)
+		
+	)
+	
+	result = list(result)
+	expense = 0
+	for row in result:
+		where_clause = ''
+		where_clause += "and parent = '%s' " % row["Name"]
+		
+		if type == "Spares":
+			where_clause += "and service_item != 'Battery' and service_item != 'Tyre'"
+		else:
+			where_clause += "and service_item = '%s'" % type
+			
+		
+		expense += frappe.db.sql("""
+			SELECT
+				sum(expense_amount)
+			FROM
+				`tabMaintenance Log`
+			WHERE
+				driver = 
+				%s"""%(where_clause))[0][0] or 0
+				
+	return expense
+	
+	
 				
 def get_chart_data(data,period_list):
 	battery_charge, tyre_charge, spare_charge, service_charge = [],[],[],[]

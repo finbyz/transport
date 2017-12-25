@@ -3,12 +3,12 @@
 /* eslint-disable */
 
 frappe.require("assets/erpnext/js/financial_statements.js", function() {
-	frappe.query_reports["Cost for Each Truck"] = {
+	frappe.query_reports["test report2"] = {
 		"filters": [
 			{
 				"fieldname": "fiscal_year",
 				"label": __("Fiscal Year"),
-				"fieldtype": "Link",
+				"fieldtype": "select",
 				"options": "Fiscal Year",
 				"default": frappe.defaults.get_user_default("fiscal_year"),
 				"reqd": 1,
@@ -32,11 +32,12 @@ frappe.require("assets/erpnext/js/financial_statements.js", function() {
 				options: "Truck Master"
 			},
 			{
-				fieldname: "driver",
-				label: __("Driver"),
-				fieldtype: "Link",
-				options: "Driver Master"
+				fieldname:"Service_type",
+				label:__("Service Type"),
+				fieldtype: "select",
+				options: "Battery Expense\nTyre Expense\nSpares Expense"
 			}
+			
 		]
 	}
-});
+});	
