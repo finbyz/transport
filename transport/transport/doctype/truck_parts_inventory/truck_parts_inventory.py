@@ -4,7 +4,11 @@
 
 from __future__ import unicode_literals
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 class TruckPartsInventory(Document):
-	pass
+	def validate(self):
+		if self.truck_part == "Battery" or self.truck_part == "Tyre":
+			if not self.serial_number:
+				frappe.throw(_("Please specify serial number"))
