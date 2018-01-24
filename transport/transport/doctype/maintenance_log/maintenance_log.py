@@ -14,7 +14,8 @@ class MaintenanceLog(Document):
 			if d.type == "Change from Inventory" or d.type == "Change at Garage":
 				old_part = frappe.get_doc("Truck Parts Inventory", d.part_no)
 				old_part.part_status = "Available"
-				old_part.truck_no = self.truck_no
+				old_part.truck_no = ""
+				old_part.warehouse = d.warehouse
 				old_part.save()
 				frappe.db.commit()
 				if d.type == "Change from Inventory":
@@ -27,17 +28,18 @@ class MaintenanceLog(Document):
 					frappe.db.commit()
 				else:
 					if not d.serial_number:
-						frappe.throw(_("Please provide serial number in row number %d"%d.idx))
+						frappe.throw(_("Please provide serial number in row %d"%d.idx))
 					elif not d.part_company:
-						frappe.throw(_("Please provide part company in row number %d"%d.idx))
+						frappe.throw(_("Please provide part company in row %d"%d.idx))
 					elif not d.purchase_rate:
-						frappe.throw(_("Please provide purchase rate in row number %d"%d.idx))
+						frappe.throw(_("Please provide purchase rate in row %d"%d.idx))
 					elif not d.purchase_date:
-						frappe.throw(_("Please provide purchase date in row number %d"%d.idx))
+						frappe.throw(_("Please provide purchase date in row %d"%d.idx))
 					elif not d.new_part_link:						
 						inventory = frappe.new_doc("Truck Parts Inventory")
 						inventory.truck_part = d.service_item
 						inventory.part_company = d.part_company
+						inventory.warehouse = d.warehouse
 						inventory.purchase_through = "Maintenance Log"
 						inventory.ref_link = self.name
 						inventory.purchase_rate = d.purchase_rate
@@ -49,6 +51,38 @@ class MaintenanceLog(Document):
 						inventory.save()
 						d.new_part_link = inventory.name
 						frappe.db.commit()
+						
+		stock_entry = None
+		for d in self.consumable_details:
+			if d.from_inventory:
+				if not d.warehouse:
+					frappe.throw(_("Please provide warehouse in row %d of Consumable Service Table"%d.idx))
+				else:
+					if not stock_entry:
+						stock_entry = frappe.new_doc("Stock Entry")
+						stock_entry.company = self.company
+						stock_entry.purpose = "Material Issue"
+						stock_entry.append("items", {
+							"s_warehouse": d.warehouse,
+							"item_code": d.item_code,
+							"qty": d.used_qty,
+							"expense_account": self.expense_account,
+							"cost_center": frappe.db.get_value("Company", self.company, "cost_center")
+						})
+					else:
+						stock_entry.append("items", {
+							"s_warehouse": d.warehouse,
+							"item_code": d.item_code,
+							"qty": d.used_qty,
+							"expense_account": self.expense_account,
+							"cost_center": frappe.db.get_value("Company", self.company, "cost_center")
+						})
+						
+		if stock_entry:
+			stock_entry.save()
+			stock_entry.submit()
+			frappe.db.commit()
+			frappe.msgprint(_("New Stock Entry created."))
 				
 	def on_submit(self):
 		def new_communication(self):

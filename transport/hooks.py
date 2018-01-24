@@ -81,6 +81,10 @@ app_license = "MIT"
 doc_events = {
 	"Payment Entry": {
 		"on_submit": "transport.api.payment_on_submit"
+	},
+	"Purchase Invoice": {
+		"on_submit": "transport.api.pi_on_submit",
+		"on_cancel": "transport.api.pi_on_cancel"
 	}
 }
 
