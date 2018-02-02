@@ -29,7 +29,7 @@ def get_columns():
 				_("Battery Expense") + ":Currency:100", 
 				_("Tyre Expense") + ":Currency:90", 
 				_("Spares Expense") + ":Currency:100", 
-				_("Other Service Charge") + ":Currency:140",
+				_("Service Charge") + ":Currency:140",
 				_("Total Expense") + ":Currency:100"
 	]
 	return columns
@@ -43,7 +43,7 @@ def get_log_data(filters):
 	
 	data = frappe.db.sql("""
 		SELECT
-			truck_no as "Truck No.", make as "Make", model as "Model", name as "Log", odometer as "Odometer", date as "Date", driver_name as "Driver", other_service_charge as "Other Service Charge", total_service_bill as "Total Expense"
+			truck_no as "Truck No.", make as "Make", model as "Model", name as "Log", odometer as "Odometer", date as "Date", driver_name as "Driver", total_service_bill as "Service Charge", total_expense as "Total Expense"
 		from
 			`tabMaintenance Log`
 		where
@@ -72,7 +72,7 @@ def get_expense(log, type, filters):
 	
 	return frappe.db.sql("""
 		SELECT
-			sum(tr.expense_amount)
+			sum(tr.new_part_rate)
 		FROM
 			`tabMaintenance Log` log, `tabTruck Maintenance` tr
 		WHERE
@@ -80,7 +80,7 @@ def get_expense(log, type, filters):
 			%s"""%(where_clause))[0][0] or 0		
 				
 def get_chart_data(data,period_list):
-	battery_charge, tyre_charge, spare_charge, service_charge = [],[],[],[]
+	#battery_charge, tyre_charge, spare_charge, service_charge = [],[],[],[]
 	battery_exp_data, tyre_exp_data, spare_exp_data, service_exp_data = [], [], [], []
 	
 	for period in period_list:
@@ -93,20 +93,20 @@ def get_chart_data(data,period_list):
 				total_battery_exp += flt(row["Battery Expense"])
 				total_tyre_exp += flt(row["Tyre Expense"])
 				total_spare_exp += flt(row["Spares Expense"])
-				total_service_exp += flt(row["Other Service Charge"])
+				total_service_exp += flt(row["Service Charge"])
 				
-		battery_charge.append([period.key, total_battery_exp])
-		tyre_charge.append([period.key, total_tyre_exp])
-		spare_charge.append([period.key, total_spare_exp])
-		service_charge.append([period.key, total_service_exp])
+		battery_exp_data.append(round(total_battery_exp,2))
+		tyre_exp_data.append(round(total_tyre_exp,2))
+		spare_exp_data.append(round(total_spare_exp,2))
+		service_exp_data.append(round(total_service_exp,2))
 		
 
 	labels = [period.key.replace("_", " ").title() for period in period_list]
 	
-	battery_exp_data= [row[1] for row in battery_charge]
+	'''battery_exp_data= [row[1] for row in battery_charge]
 	tyre_exp_data= [row[1] for row in tyre_charge]
 	spare_exp_data= [row[1] for row in spare_charge]
-	service_exp_data= [row[1] for row in service_charge]
+	service_exp_data= [row[1] for row in service_charge]'''
 	
 	datasets = []
 	if battery_exp_data:
@@ -126,7 +126,7 @@ def get_chart_data(data,period_list):
 		})
 	if service_exp_data:
 		datasets.append({
-			'title': 'Other Service Charge',
+			'title': 'Service Charge',
 			'values': service_exp_data
 		})
 	chart = {
