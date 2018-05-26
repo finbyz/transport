@@ -85,6 +85,9 @@ doc_events = {
 	"Purchase Invoice": {
 		"on_submit": "transport.api.pi_on_submit",
 		"on_cancel": "transport.api.pi_on_cancel"
+	},
+	"Purchase Order": {
+		"before_submit": "transport.api.po_before_submit"
 	}
 }
 

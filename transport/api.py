@@ -1,58 +1,17 @@
 import frappe
-from frappe import msgprint, _, db
+from frappe import _, msgprint, db, get_list, delete_doc, get_doc, new_doc
+from frappe.utils import get_url_to_form
+
 
 @frappe.whitelist()
 def payment_on_submit(self, method):
-	po_payments(self, method)
+	po_payments(self)
 
-@frappe.whitelist()
-def pi_on_submit(self, method):
-	create_part_tool(self, method)
-
-@frappe.whitelist()
-def pi_on_cancel(self, method):
-	cancel_part_tool(self, method)
-	
-def create_part_tool(self, method):
-	parts = []
-	url = "http://erp.agarwallogistics.net/desk#Form/Part%20Creation%20Tool/"
-	for row in self.items:
-		if row.item_group == "Truck Part":
-			part_tool = frappe.new_doc("Part Creation Tool")
-			part_tool.truck_part = row.item_code
-			part_tool.part_company = row.part_company
-			part_tool.number_of_parts = int(row.qty)
-			part_tool.warehouse = row.part_warehouse
-			part_tool.purchase_invoice = self.name
-			part_tool.supplier = self.supplier
-			part_tool.purchase_date = self.posting_date
-			part_tool.purchase_rate = row.rate
-			part_tool.save()
-			frappe.db.commit()
-			link = "<a href="+url+""+part_tool.name+">"+row.item_code+"</a>"
-			parts.append(link)
-			
-	if parts:
-		msgprint(_("Part Creation Tool updated for parts '%s'. Please submit the document to create parts."%(",".join(parts))))
-
-
-def cancel_part_tool(self, method):
-	result = frappe.db.sql("""
-		SELECT 
-			name as "Name"
-		FROM
-			`tabPart Creation Tool`
-		WHERE
-			purchase_invoice = '%s'"""%self.name, as_dict=True)
-			
-	for row in result:
-		frappe.delete_doc("Part Creation Tool", row["Name"])
-			
 #Update PO payments on Submit
-def po_payments(self, method):
+def po_payments(self):
 	for row in self.references:
 		if row.reference_doctype == "Purchase Order":
-			target_po = frappe.get_doc("Purchase Order", row.reference_name)
+			target_po = get_doc("Purchase Order", row.reference_name)
 			
 			target_po.append("payments", {
 				"reference_date": self.reference_date,
@@ -63,4 +22,57 @@ def po_payments(self, method):
 				"difference_amount" : self.difference_amount
 			})
 		target_po.save()
-		frappe.db.commit()
+		db.commit()
+
+@frappe.whitelist()
+def pi_on_submit(self, method):
+	create_part_tool(self)
+	
+def create_part_tool(self):
+	parts = []
+	for row in self.items:
+		if row.item_group == "Truck Part":
+			part_tool = new_doc("Part Creation Tool")
+			part_tool.truck_part = row.item_code
+			part_tool.part_company = row.part_company
+			part_tool.number_of_parts = int(row.qty)
+			part_tool.warehouse = row.part_warehouse
+			part_tool.purchase_invoice = self.name
+			part_tool.supplier = self.supplier
+			part_tool.purchase_date = self.posting_date
+			part_tool.purchase_rate = row.rate
+			part_tool.save()
+			db.commit()
+			link = get_url_to_form("Part Creation Tool", part_tool.name)
+			parts.append("<b><a href='{0}'>{1}</a></b>".format(link, row.item_code))
+			
+	if parts:
+		msgprint(_("Part Creation Tool updated for parts '%s'. Please submit the document to create parts."%(",".join(parts))))
+
+@frappe.whitelist()
+def pi_on_cancel(self, method):
+	cancel_part_tool(self)
+
+def cancel_part_tool(self):
+	result = get_list("Part Creation Tool", filters={'purchase_invoice': self.name}, fields='name')
+				
+	for row in result:
+		delete_doc("Part Creation Tool", row.name)
+
+@frappe.whitelist()
+def po_before_submit(self, method):
+	update_truck_info(self)
+
+def update_truck_info(self):
+	if self.for_indent:
+		indent = get_doc("Indent", self.for_indent)
+		indent.db_set('freight_challan_ref', self.name)
+
+		for row in self.items:
+			if not row.truck_no:
+				frappe.throw(_("Truck No missing in row %d" % row.idx))
+
+			indent.db_set('rented_truck_no', row.truck_no)
+			truck = get_doc("Truck Master", row.truck_no)
+			if not truck.truck_owner:
+				truck.db_set('truck_owner', self.supplier)
