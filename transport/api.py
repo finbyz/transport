@@ -64,15 +64,25 @@ def po_before_submit(self, method):
 	update_truck_info(self)
 
 def update_truck_info(self):
-	if self.for_indent:
-		indent = get_doc("Indent", self.for_indent)
-		indent.db_set('freight_challan_ref', self.name)
+	if self.for_tef:
+		tef = get_doc("Truck Engagement Form", self.for_tef)
 
 		for row in self.items:
 			if not row.truck_no:
 				frappe.throw(_("Truck No missing in row %d" % row.idx))
 
-			indent.db_set('rented_truck_no', row.truck_no)
-			truck = get_doc("Truck Master", row.truck_no)
-			if not truck.truck_owner:
-				truck.db_set('truck_owner', self.supplier)
+			tef.db_set('rented_truck_no', row.truck_no)
+			db.set_value("Truck Master", row.truck_no, 'truck_owner', self.supplier)
+
+		tef.db_set('freight_challan_ref', self.name)
+		tef.db_set('supplier', self.supplier)
+		tef.db_set('truck_no', self.truck_no)
+		db.commit()
+
+@frappe.whitelist()
+def po_before_cancel(self, method):
+	if self.for_tef:
+		tef = get_doc("Truck Engagement Form", self.for_tef)
+		tef.db_set('freight_challan_ref', '')
+		tef.db_set('supplier', '')
+		tef.db_set('rented_truck_no', '')
