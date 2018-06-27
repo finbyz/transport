@@ -69,7 +69,8 @@ def make_truck_engagement_form(source_name, target_doc=None):
 			'customer': source.customer,
 			'source': source.source,
 			'destination': source.destination,
-			'truck_type': source.truck_type
+			'truck_type': source.truck_type,
+			'required_by_date': source.required_by_date
 		})
 
 	doclist = get_mapped_doc("Indent", source_name, {

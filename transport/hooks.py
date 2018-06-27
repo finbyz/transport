@@ -16,6 +16,8 @@ app_license = "MIT"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/transport/css/transport.css"
+app_include_css = "/assets/transport/css/transport.min.css"
+
 # app_include_js = "/assets/transport/js/transport.js"
 
 # include js, css files in header of web template
