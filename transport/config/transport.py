@@ -84,5 +84,17 @@ def get_data():
 				},
 				
 			]
+		},
+		{
+			"label": _("Other"),
+			"items": [
+				{
+					"type": "doctype",
+					"name": "Purchase Order",
+					"label":"Freight Challan",
+				},
+				
+				
+			]
 		}
 	]

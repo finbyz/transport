@@ -8,6 +8,7 @@ from frappe import _, db
 from frappe.utils import flt , now, date_diff
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.contacts.doctype.address.address import get_company_address
 
 class Trip(Document):
 	def before_cancel(self):
@@ -116,6 +117,9 @@ def make_freight_challan(source_name, target_doc=None):
 	
 	return doclist
 
+@frappe.whitelist()
+def company_address(company):
+	return get_company_address(company)
 
 
 
