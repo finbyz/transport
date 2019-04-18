@@ -232,7 +232,7 @@
   }, 
   {
    "allow_bulk_edit": 0, 
-   "allow_on_submit": 0, 
+   "allow_on_submit": 1, 
    "bold": 0, 
    "collapsible": 0, 
    "columns": 0, 
@@ -1431,7 +1431,7 @@
  "issingle": 0, 
  "istable": 0, 
  "max_attachments": 0, 
- "modified": "2018-08-29 10:21:20.762186", 
+ "modified": "2019-04-17 18:07:16.578892", 
  "modified_by": "Administrator", 
  "module": "Transport", 
  "name": "Trip", 

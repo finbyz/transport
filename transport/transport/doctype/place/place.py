@@ -7,5 +7,5 @@ import frappe
 from frappe.model.document import Document
 
 class Place(Document):
-	def validate(self):
+	def autoname(self):
 		self.name = self.place + '_' + self.customer_code
