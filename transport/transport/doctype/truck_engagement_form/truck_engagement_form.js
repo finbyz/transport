@@ -157,7 +157,7 @@ frappe.ui.form.on("Truck Engagement Form", {
 			}
 		}
 
-		if(frappe.route_options){
+		if(frappe.route_options.total_fuel_qty && frappe.route_options.total_fuel_amount){
 			let fuel_qty = frappe.route_options.total_fuel_qty + (frm.doc.total_fuel_qty || 0.0);
 			let fuel_amount = frappe.route_options.total_fuel_amount + (frm.doc.total_fuel_amount || 0.0);
 			frm.set_value('total_fuel_qty',  fuel_qty);

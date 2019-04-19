@@ -46,24 +46,14 @@ class TruckEngagementForm(Document):
 
 	def on_submit(self):
 		frappe.db.set_value("Driver Master", self.driver, 'status', 'Booked')
-		# driver = frappe.get_doc("Driver Master", self.driver)
-		# driver.status = 'Booked'
 		
 		if self.change_dcontact:
 			frappe.db.set_value("Driver Master", self.driver, 'contact_no', self.dcontact_no)
-			# driver.contact_no = self.dcontact_no
-
-		# driver.save()
 
 		if self.khalasi:
 			frappe.db.set_value("Khalasi Master", self.khalasi, 'status', 'Booked')
-			# khalasi = frappe.get_doc("Khalasi Master", self.khalasi)
-			# khalasi.status = 'Booked'
 			if self.change_kcontact:
 				frappe.db.set_value("Khalasi Master", self.khalasi, 'contact_no', self.kcontact_no)
-				# khalasi.contact_no = self.kcontact_no
-
-			# khalasi.save()
 
 		frappe.db.set_value("Truck Master", self.truck_no, 'status', 'Booked')
 		self.status = 'Engaged'
@@ -79,21 +69,17 @@ class TruckEngagementForm(Document):
 
 		for fuels in fuel_allotments:
 			fuel = frappe.get_doc("Fuel Allotment", fuels)
+			self.db_set('total_fuel_qty', self.total_fuel_qty - fuel.total_qty)
+			self.db_set('total_fuel_amount', self.total_fuel_amount - fuel.total_amount)
 			fuel.cancel()
 
 		frappe.db.set_value("Driver Master", self.driver, 'status', 'Available')
-		# driver = frappe.get_doc("Driver Master", self.driver)
-		# driver.db_set('status', 'Available')
 
 		if self.khalasi:
 			frappe.db.set_value("Khalasi Master", self.khalasi, 'status', 'Available')
-			# khalasi = frappe.get_doc("Khalasi Master", self.khalasi)
-			# khalasi.db_set('status', 'Available')
 
 		frappe.db.set_value("Truck Master", self.truck_no, 'status', 'Available')
-		# self.db_set('status', 'Cancelled')
-		self.status = 'Cancelled'
-		self.save()
+		self.db_set('status', 'Cancelled')
 
 	def get_indents(self):
 		if not self.required_by_date:
@@ -156,7 +142,6 @@ def make_fuel_allotment(source_name, target_doc=None):
 		else:
 			target.type = "Driver Master"
 			target.pay_to = source.driver
-		# target.paid_from = source.doctype
 
 	doclist = get_mapped_doc("Truck Engagement Form", source_name, {
 			"Truck Engagement Form":{
