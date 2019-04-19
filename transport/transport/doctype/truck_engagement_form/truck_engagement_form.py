@@ -4,14 +4,16 @@
 
 from __future__ import unicode_literals
 import frappe
-from frappe import _, get_doc, db
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import nowdate
 from frappe.model.mapper import get_mapped_doc
 
 class TruckEngagementForm(Document):
-	
 	def validate(self):
+		if self._action == 'submit':
+			self.validate_truck_details()
+
 		if self.token_valid_up_to < nowdate():
 			frappe.msgprint(_("Tax Token has expired, check and correct Truck Master"), title="Document Expired")
 		if self.fitness_valid_up_to < nowdate():
@@ -21,73 +23,109 @@ class TruckEngagementForm(Document):
 		if self.valid_up_to < nowdate():
 			frappe.msgprint(_("Driver License has expired, check and correct Driver Master"), title="License Expired")
 
-	def before_submit(self):
-
+	def validate_truck_details(self):
 		if not self.truck_no:
-			frappe.throw("Please set Truck no")
+			frappe.throw(_("Please set Truck no"))
+
+		status = frappe.db.get_value("Truck Master", self.truck_no, 'status')
+
+		if status != "Available":
+			frappe.throw(_("Current Truck is already {}. Please select another Truck.".format(status)))
+
+		status = frappe.db.get_value("Driver Master", self.driver, 'status')
+
+		if status != "Available":
+			frappe.throw(_("Current Driver is already {}. Please select another Driver.".format(status)))
+
+		if self.khalasi:
+			status = frappe.db.get_value("Khalasi Master", self.khalasi, 'status')
+
+			if status != "Available":
+				frappe.throw(_("Current Khalasi is already {}. Please select another Khalasi.".format(status)))
+
 
 	def on_submit(self):
-		# Push Changes in Driver and Khalasi Contact from Truck Engagement Form status
-		driver = get_doc("Driver Master", self.driver)
-		driver.db_set('status', 'Booked')
+		frappe.db.set_value("Driver Master", self.driver, 'status', 'Booked')
+		# driver = frappe.get_doc("Driver Master", self.driver)
+		# driver.status = 'Booked'
 		
 		if self.change_dcontact:
-			driver.db_set('contact_no', self.dcontact_no)
+			frappe.db.set_value("Driver Master", self.driver, 'contact_no', self.dcontact_no)
+			# driver.contact_no = self.dcontact_no
+
+		# driver.save()
 
 		if self.khalasi:
-			khalasi = get_doc("Khalasi Master", self.khalasi)
-			khalasi.db_set('status', 'Booked')
+			frappe.db.set_value("Khalasi Master", self.khalasi, 'status', 'Booked')
+			# khalasi = frappe.get_doc("Khalasi Master", self.khalasi)
+			# khalasi.status = 'Booked'
 			if self.change_kcontact:
-				khalasi.db_set('contact_no', self.kcontact_no)
+				frappe.db.set_value("Khalasi Master", self.khalasi, 'contact_no', self.kcontact_no)
+				# khalasi.contact_no = self.kcontact_no
+
+			# khalasi.save()
 
 		frappe.db.set_value("Truck Master", self.truck_no, 'status', 'Booked')
-		self.db_set('status', 'Engaged')
+		self.status = 'Engaged'
+		self.save()
 
 	def on_cancel(self):
-		fuel_allotments = frappe.get_list("Fuel Allotment", {'paid_from': self.doctype, 'paid_for': self.name})
+		fuel_allotments = frappe.get_list("Fuel Allotment", 
+			filters={
+				'docstatus': 1,
+				'paid_from': self.doctype, 
+				'paid_for': self.name,
+			})
 
 		for fuels in fuel_allotments:
-			fuel = get_doc("Fuel Allotment", fuels)
+			fuel = frappe.get_doc("Fuel Allotment", fuels)
 			fuel.cancel()
 
-		driver = get_doc("Driver Master", self.driver)
-		driver.db_set('status', 'Available')
+		frappe.db.set_value("Driver Master", self.driver, 'status', 'Available')
+		# driver = frappe.get_doc("Driver Master", self.driver)
+		# driver.db_set('status', 'Available')
 
 		if self.khalasi:
-			khalasi = get_doc("Khalasi Master", self.khalasi)
-			khalasi.db_set('status', 'Available')
+			frappe.db.set_value("Khalasi Master", self.khalasi, 'status', 'Available')
+			# khalasi = frappe.get_doc("Khalasi Master", self.khalasi)
+			# khalasi.db_set('status', 'Available')
 
 		frappe.db.set_value("Truck Master", self.truck_no, 'status', 'Available')
-		self.db_set('status', 'Cancelled')
+		# self.db_set('status', 'Cancelled')
+		self.status = 'Cancelled'
+		self.save()
 
 	def get_indents(self):
 		if not self.required_by_date:
-			frappe.throw("Please set Required by date")
+			frappe.throw("Please set Required By Date!")
 			return
 
-		where_clause = ''
-		where_clause += self.required_by_date and " and required_by_date = '%s'" % self.required_by_date or ''
-		where_clause += self.customer and " and customer = '%s'" % self.customer.replace("'", "\'") or ''
-		where_clause += self.source and " and source = '%s'" % self.source.replace("'", "\'") or ''
+		condition = ''
+		condition += self.required_by_date and " and required_by_date <= '%s'" % self.required_by_date or ''
+		condition += self.customer and " and customer = '%s'" % frappe.db.escape(self.customer) or ''
+		condition += self.source and " and source = '%s'" % frappe.db.escape(self.source) or ''
 		
-		data = db.sql("""
+		data = frappe.db.sql("""
 			SELECT
 				name, customer, item_code, source, destination, required_by_date
 			FROM
 				`tabIndent`
 			WHERE
-				status = 'Created'
-			%s""" % where_clause, as_dict=1)
+				docstatus = 1
+				and status = 'Created' {condition} 
+			ORDER BY
+				required_by_date """.format(condition = condition), as_dict=1)
 
-		for row in data:
-			self.append('indent_detail', {
-				'indent': row.name,
-				'customer': row.customer,
-				'required_by_date': row.required_by_date,
-				'item_code':row.item_code,
-				'source': row.source,
-				'destination':row.destination
-			})
+		if data:
+			for row in data:
+				self.append('indent_detail', {
+					'indent': row.name,
+					'customer': row.customer,
+					'required_by_date': row.required_by_date,
+					'item_code':row.item_code,
+					'source': row.source,
+					'destination':row.destination
+				})
 
 @frappe.whitelist()
 def make_trip(source_name, target_doc=None):
@@ -100,7 +138,6 @@ def make_trip(source_name, target_doc=None):
 				"field_no_map":{
 					"naming_series",
 					"status",
-					"truck_owner"
 				}
 			},
 			"Indent Detail": {
@@ -119,13 +156,14 @@ def make_fuel_allotment(source_name, target_doc=None):
 		else:
 			target.type = "Driver Master"
 			target.pay_to = source.driver
-		target.paid_from = source.doctype
+		# target.paid_from = source.doctype
 
 	doclist = get_mapped_doc("Truck Engagement Form", source_name, {
 			"Truck Engagement Form":{
 				"doctype": "Fuel Allotment",
 				"field_map": {
-					"name": "paid_for"
+					"name": "paid_for",
+					"doctype": "paid_from",
 				},
 				"field_no_map":[
 					"naming_series"
@@ -151,7 +189,8 @@ def make_freight_challan(source_name, target_doc=None):
 				"doctype": "Purchase Order",
 				"field_map": {
 					"required_by_date": "schedule_date",
-					"name": "for_tef"
+					"name": "for_tef",
+					"truck_owner": "supplier",
 				},
 				"field_no_map":[
 					"naming_series"
